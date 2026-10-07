@@ -76,8 +76,14 @@ func TestConcurrentNoOverIssueAllAlgorithms(t *testing.T) {
 	}
 	for _, tc := range algos {
 		store.Restore(t.Context(), nil)
+		// Sliding-window limit is min(Burst, ceil(Rate*Window)): a rate of
+		// 1/s over a 1m window admits up to 60, so the burst cap (30) binds.
+		rate := 0.0001
+		if tc.alg == AlgSlidingWindow {
+			rate = 1
+		}
 		p := Policy{ID: tc.name, Scope: ScopeCaller, CallerID: "*", ServiceID: "*",
-			Key: "*", Algorithm: tc.alg, Rate: 0.0001, Burst: burst, Window: tc.win}
+			Key: "*", Algorithm: tc.alg, Rate: rate, Burst: burst, Window: tc.win}
 		m, err := NewPolicyManager(store, c, []Policy{p})
 		if err != nil {
 			t.Fatal(err)

@@ -23,6 +23,28 @@ func restart(t *testing.T, path string, policies []Policy) (*PolicyManager, *Fak
 	return m, c
 }
 
+// restartLikeReal mirrors a real process restart more closely: the new
+// process monotonic clock resets to mono0, while the wall clock is continuous
+// and reads wall0 at the moment of restart (usually "later" than the old
+// process wall time). This is the scenario that exposed the long-term
+// rejection bug: persisted monotonic timestamps outlive their clock lineage.
+func restartLikeReal(t *testing.T, path string, mono0, wall0 time.Duration, policies []Policy) (*PolicyManager, *FakeClock) {
+	t.Helper()
+	store, err := NewFileStore(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { store.Close() })
+	c := NewFakeClock()
+	c.SetMono(mono0)
+	c.SetNow(time.Unix(0, wall0.Nanoseconds()))
+	m, err := NewPolicyManager(store, c, policies)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return m, c
+}
+
 // Restart recovery: token-bucket balance survives; used quota is not cleared.
 func TestRestartRecoveryTokenBucket(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "rl.json")

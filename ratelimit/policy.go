@@ -61,10 +61,13 @@ type Policy struct {
 	Key string
 
 	Algorithm AlgorithmType
-	// Rate is the refill/leak rate in units per second.
+	// Rate is the refill/leak rate in units per second. For the sliding
+	// window it jointly bounds the window: at most ceil(Rate*Window) requests
+	// are admitted per window span (alongside the Burst hard cap).
 	Rate float64
 	// Burst is the token-bucket capacity / leaky-bucket queue capacity /
-	// sliding-window max request count.
+	// sliding-window hard instantaneous cap. For the sliding window the
+	// effective window cap is min(Burst, ceil(Rate*Window)).
 	Burst int64
 	// Window is the sliding-window span (only used by AlgSlidingWindow).
 	Window time.Duration

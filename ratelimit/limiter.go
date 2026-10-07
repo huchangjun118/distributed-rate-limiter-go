@@ -44,7 +44,7 @@ func (l *Limiter) Consume(ctx context.Context, p Policy, req Request) (Decision,
 			return l.degrade(p, err)
 		}
 
-		res := dispatch(p.Algorithm, oldRaw, l.clock.Mono(), p)
+		res := dispatch(p.Algorithm, oldRaw, l.clock.Mono(), l.clock.WallNano(), l.clock.Lineage(), p)
 		if !res.dirty {
 			return decisionFrom(p, res), nil
 		}
