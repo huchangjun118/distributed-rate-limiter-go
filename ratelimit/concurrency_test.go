@@ -69,15 +69,19 @@ func TestConcurrentNoOverIssueAllAlgorithms(t *testing.T) {
 	algos := []struct {
 		name string
 		alg  AlgorithmType
+		rate float64
 		win  time.Duration
 	}{
-		{"leaky", AlgLeakyBucket, 0},
-		{"sliding", AlgSlidingWindow, time.Minute},
+		{"leaky", AlgLeakyBucket, 0.0001, 0},
+		// Sliding window caps per-window throughput at min(Burst,
+		// ceil(Rate*Window)); rate 1/s over a 1-minute window allows 60, so
+		// the effective cap here is exactly Burst.
+		{"sliding", AlgSlidingWindow, 1, time.Minute},
 	}
 	for _, tc := range algos {
 		store.Restore(t.Context(), nil)
 		p := Policy{ID: tc.name, Scope: ScopeCaller, CallerID: "*", ServiceID: "*",
-			Key: "*", Algorithm: tc.alg, Rate: 0.0001, Burst: burst, Window: tc.win}
+			Key: "*", Algorithm: tc.alg, Rate: tc.rate, Burst: burst, Window: tc.win}
 		m, err := NewPolicyManager(store, c, []Policy{p})
 		if err != nil {
 			t.Fatal(err)
